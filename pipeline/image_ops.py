@@ -18,7 +18,7 @@ from reportlab.graphics.shapes import *
 logger = logging.getLogger("realms")
 
 
-def close_svg(drawing, rng=460, debug=False, islands_only=False, output_size=400, scaling=1.):
+def close_svg(drawing, islands_only=False, debug=False, output_size=400, scaling=1., lerp_points=None):
     """This function tries to find open ends of paths and
     connects the ends while going around the image borders.
     
@@ -32,22 +32,26 @@ def close_svg(drawing, rng=460, debug=False, islands_only=False, output_size=400
     Returns:
         bitmap of closed islands
     """
-    LIMIT = 30
     OUTPUT_SIZE = output_size
     SCALING = scaling
 
-    def extend(x, y, bound, limit):
-        """Extrapolates points lying at ‘limit‘."""
+    RNG_0 = 0
+    RNG_1 = OUTPUT_SIZE
+    LIMIT = 30
+
+    def extend(x, y):
+        """Extrapolates points lying at LIMIT."""
+        # print('extend', x, y)
         assert y != 0
         assert x != 0
-        if x < -limit:
-            return [-bound, y / x * -bound]
-        elif x > limit:
-            return [bound, y / x * bound]
-        elif y < -limit:
-            return [x / y * -bound, -bound]
-        elif y > limit:
-            return [x / y * bound, bound]
+        if x < LIMIT:
+            return [RNG_0, y]
+        elif x > RNG_1 - LIMIT:
+            return [RNG_1, y]
+        elif y < LIMIT:
+            return [x, RNG_0]
+        elif y > RNG_1 - LIMIT:
+            return [x, RNG_1]
         else:
             print(x,y)
             raise ValueError(f"edge not within limits.")
@@ -59,6 +63,7 @@ def close_svg(drawing, rng=460, debug=False, islands_only=False, output_size=400
     pure_islands = []
     for shape_group in drawing.contents[0].contents:
         path = shape_group.contents[0]
+        path.points = lerp_points(path.points)
         plen = len(path.points)
         split_array = [[path.points[x], path.points[x + 1]] for x in range(0, plen, 2)]
 
@@ -69,8 +74,8 @@ def close_svg(drawing, rng=460, debug=False, islands_only=False, output_size=400
         else:
             first, last = split_array[0], split_array[-1]
             # check coordinates on the far left:
-            first = extend(first[0], first[1], rng, LIMIT)
-            last = extend(last[0], last[1], rng, LIMIT)
+            first = extend(first[0], first[1])
+            last = extend(last[0], last[1])
             new_array = [first]
             new_array.extend(split_array)
             new_array.append(last)
@@ -93,35 +98,35 @@ def close_svg(drawing, rng=460, debug=False, islands_only=False, output_size=400
 
     lefts = [
         a for a in begends_list
-        if -rng == a[0]
+        if RNG_0 == a[0]
     ]
     lefts.sort(key=lambda x: -x[1])
 
     bottoms = [
         a for a in begends_list
-        if -rng == a[1]
+        if RNG_0 == a[1]
     ]
     bottoms.sort(key=lambda x: x[0])
 
     rights = [
         a for a in begends_list
-        if rng == a[0]
+        if RNG_1 == a[0]
     ]
     rights.sort(key=lambda x: x[1])
 
     tops = [
         a for a in begends_list
-        if rng == a[1]
+        if RNG_1 == a[1]
     ]
     tops.sort(key=lambda x: -x[0])
 
     # Stage 3: draw lines in order to connect the sorted endpoints.
     lines = []
 
-    up_left = np.array([-rng, rng])
-    bottom_left = np.array([-rng, -rng])
-    bottom_right = np.array([rng, -rng])
-    up_right = np.array([rng, rng])
+    up_left = np.array([RNG_0, RNG_1])
+    bottom_left = np.array([RNG_0, RNG_0])
+    bottom_right = np.array([RNG_1, RNG_0])
+    up_right = np.array([RNG_1, RNG_1])
     draw = False
 
     now = up_left
@@ -234,8 +239,8 @@ def close_svg(drawing, rng=460, debug=False, islands_only=False, output_size=400
         al = np.vstack(islands)
         plt.figure(figsize=(10, 10))
         plt.scatter(al[:, 0], -al[:, 1], s=4)
-        plt.xlim(-rng - 100, rng + 100)
-        plt.ylim(-rng - 100, rng + 100)
+        plt.xlim(RNG_0 - 100, RNG_1 + 100)
+        plt.ylim(RNG_0 - 100, RNG_1 + 100)
         plt.show()
 
     if islands_only:
@@ -243,7 +248,7 @@ def close_svg(drawing, rng=460, debug=False, islands_only=False, output_size=400
 
     # Stage 5: scale and cast to PIL.Image
     for i in range(len(islands)):
-        islands[i] = (islands[i] * 0.4 + 200) * SCALING
+        islands[i] = islands[i] * SCALING
 
     base = PIL.Image.new("L", (OUTPUT_SIZE, OUTPUT_SIZE), 0)
     drawer = PIL.ImageDraw.Draw(base)

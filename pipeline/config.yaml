@@ -1,7 +1,7 @@
 svg:
   scaling: 1.0 # was 2.0
   padding: 0 # was 16
-  output_size: 400
+  output_size: 2000
 pipeline:
   main_output_dir: "./output"
   resources_dir: "./resources"

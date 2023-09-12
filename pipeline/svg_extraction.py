@@ -44,9 +44,10 @@ class SVGExtractor:
     def load_drawing(self):
         self.drawing_orig = svg2rlg(self.drawing_path)
         print('svg drawing:', self.drawing_orig.width, self.drawing_orig.height)
-        self.drawing_orig.scale(self.scale, self.scale)
-        self.drawing_orig.width *= self.scale
-        self.drawing_orig.height *= self.scale
+        if self.scale > 1.0:
+            self.drawing_orig.scale(self.scale, self.scale)
+            self.drawing_orig.width *= self.scale
+            self.drawing_orig.height *= self.scale
 
     def get_cls(self, svgclass, key=None, value=None):
         # self.load_drawing()
@@ -130,4 +131,4 @@ def get_heightline_centers(drawing, scaling=1):
         line_center = [(line.y2+line.y1)/2, (line.x2+line.x1)/2]
         line_coordinates.append(line_center)
     line_coordinates = np.vstack(line_coordinates)
-    return (line_coordinates*0.4+200)*scaling
+    return line_coordinates * scaling

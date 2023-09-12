@@ -7,6 +7,7 @@ import sys
 import click
 from omegaconf import OmegaConf
 from pathlib import Path
+import shutil
 
 import numpy as np
 import random as rand
@@ -36,9 +37,10 @@ from utils import *
 # from coloring import biomes, WATER_COLORS, color_from_json
 
 def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
-    OUTPUT_SIZE = config.svg.output_size
-    REL_SEA_SCALING = config.terrain.relative_sea_depth_scaling
     HSCALES = config.terrain.height_scales
+    OUTPUT_SIZE = config.svg.output_size
+
+    REL_SEA_SCALING = config.terrain.relative_sea_depth_scaling
     # hscale = choice(list(HSCALES))
     hscale = "hi"
     # PAD = config.pipeline.general_padding
@@ -88,7 +90,26 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
         config.terrain.coastal_dropoff = rand.uniform(70, 90)
 
     with step("Setting up extractor"):
-        extractor = SVGExtractor(realm_path, scale=config.svg.scaling)
+        # Rescale svg on the viewbox
+        realm_data = ''
+        with open(realm_path, 'r') as file:
+            realm_data = file.read()
+        realm_data = realm_data.replace('height="400"', f'height="{OUTPUT_SIZE}"')
+        realm_data = realm_data.replace('width="400"', f'width="{OUTPUT_SIZE}"')
+        realm_data = realm_data.replace('viewBox="-500 -500 1000 1000"', 'viewBox="-450 -450 900 900"')
+
+        # Extract scaled svg
+        scaled_path = realm_path.replace(".svg", "_scaled.svg")
+        print("scaled_path:", scaled_path)
+        with open(scaled_path, 'w') as file:
+            file.write(realm_data)
+
+        # Extract scaled svg
+        extractor = SVGExtractor(scaled_path, scale=config.svg.scaling)
+
+        # delete scaled svg
+        Path.unlink(Path(scaled_path))
+
         if debug:
             extractor.show(DEBUG_IMG_SIZE)
 
@@ -102,13 +123,33 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
     # MASKING
     #############################################
 
+    def map(value, inMin, inMax, outMin, outMax):
+        inSpan = inMax - inMin
+        outSpan = outMax - outMin
+        valueScaled = float(value - inMin) / float(inSpan)
+        return outMin + (valueScaled * outSpan)
+    
+    def lerp_point(point):
+        return map(point, -450, 450, 0, OUTPUT_SIZE)
+
+    # def lerp_np(arr):
+    #     return np.array(list(map(lerp_point, arr)))
+
+    def lerp_points(points_or_point):
+        if np.isscalar(points_or_point):
+            return lerp_point(points_or_point)
+        result = []
+        for p in points_or_point:
+            result.append(lerp_points(p))
+        return np.array(result) if isinstance(points_or_point, np.ndarray) else result
+
     with step("Starting ground-sea mask logic"):
         # uses a fixed padding of 32
         # print(realm_number)
-        mask = close_svg(coast_drawing, debug=debug, output_size=OUTPUT_SIZE, scaling=config.svg.scaling)
-        print('mask_1', mask.size)
+        mask = close_svg(coast_drawing, debug=debug, output_size=OUTPUT_SIZE, scaling=config.svg.scaling, lerp_points=lerp_points)
 
         centers = get_heightline_centers(heightline_drawing)
+        centers = lerp_points(centers)
         sum = _sum = 0
         _mask = (mask - 1) // 255
         for center in centers:
@@ -118,7 +159,7 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
             mask = _mask
 
         # add islands
-        mask += close_svg(coast_drawing, debug=debug, islands_only=True)
+        mask = mask + close_svg(coast_drawing, islands_only=True, debug=debug, output_size=OUTPUT_SIZE, scaling=config.svg.scaling, lerp_points=lerp_points)
         mask = mask.clip(0, 1)
 
         # extend land towards edges
@@ -178,7 +219,8 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
             plt.show()
 
     with step("----Combining coast and rivers"):
-        final_mask = (mask & ~rivers) * 255
+        # final_mask = (mask & ~rivers) * 255  # thick rivers
+        final_mask = (mask & ~original_rivers) * 255
         anti_final_mask = np.where(final_mask == 255, 0, 255)
         if debug:
             print(f"unique final_mask: {np.unique(final_mask)}")
@@ -375,7 +417,6 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
         hmap = (hmap * 255).astype(np.uint8)
         himg = PIL.Image.fromarray(hmap).convert('LA')
 
-        # final_mask = (final_mask * 255).astype(np.uint8)
         mask_img = PIL.Image.fromarray(final_mask).convert('L')
         himg.putalpha(mask_img)
         

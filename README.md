@@ -2,9 +2,13 @@
 
 ## About this fork
 
-- Removed cities from the height map
+- Exact output texture size (`config.svg.output_size: 2000`)
+- Rescale and remove padding from the SVG view box
+- Render the height map at full size (no scaling, no blurring)
 - Carve rivers into mountains instead of lowering them to sea level
-- Better texture size control
+- Removed cities from the height map
+- Disabled underwater topology
+- Added alpha channel (Sea is zero)
 - Disabled colors render
 
 
