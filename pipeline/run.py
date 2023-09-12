@@ -150,11 +150,16 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
         # make bit thicker
         rivers = skimage.filters.gaussian(
             rivers,
-            sigma=config.pipeline.river_gaussian / config.pipeline.extra_scaling
+            sigma=config.pipeline.river_gaussian / config.pipeline.extra_scaling,
+            channel_axis=-1
         )[..., 0]  # rivers is now [0,1]
         rivers = (rivers < 0.99) * 1
         rivers = rivers.astype(np.uint8)
-        original_rivers = skimage.filters.gaussian(original_rivers, sigma=0.2)[..., 0]  # rivers is now [0,1]
+        original_rivers = skimage.filters.gaussian(
+            original_rivers,
+            sigma=0.2,
+            channel_axis=-1
+        )[..., 0]  # rivers is now [0,1]
         original_rivers = (original_rivers < 0.85) * 1
         original_rivers = original_rivers.astype(np.uint8)
 
