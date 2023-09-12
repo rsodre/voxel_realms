@@ -13,7 +13,11 @@ with open("resources/database.json", encoding="utf8") as file:
     data = json.load(file)
 
 async def download(i):
-    r = requests.get(data[str(i)]["image"], allow_redirects=True)
+    url = data[str(i)]["image"]
+    # url = url.replace("https://gateway.pinata.cloud/ipfs/", "https://ipfs.io/ipfs/")
+    url = url.replace("https://gateway.pinata.cloud/ipfs/", "http://ipfs.localhost:8084/ipfs/")
+    # print(url)
+    r = requests.get(url, allow_redirects=True)
     with open(f"svgs/{i}.svg", "wb") as f:
         f.write(r.content)
     print(i)
