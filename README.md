@@ -6,10 +6,26 @@
 - Rescale and remove padding from the SVG view box
 - Render the height map at full size (no scaling, no blurring)
 - Carve rivers into mountains instead of lowering them to sea level
+- Use original river widths, not thicker
 - Removed cities from the height map
+- Disabled colors render
 - Disabled underwater topology
 - Added alpha channel (Sea is zero)
-- Disabled colors render
+
+#### TODO
+
+- We lost some mountain heights. Fix it! (compare with original)
+- Carve rivers into land, do not level at sea.
+- Move cities to the river sides, they are above water!
+- Extract metadata
+	- Cities position in viewbox, km grid, and tile
+	- Cities height
+	- Cities sizes (radius)
+	- Cities strategic position (by the sea, by a river, on an island)
+	- Region names
+	- Region areas
+	- Cities region (if possible)
+	- Height map hash/checksum that can validate an x/y pixel to its height on-chain (if possible)
 
 
 ## Features
@@ -37,6 +53,7 @@ This pipeline has been tested on linux, but will likely also
 work on Windows. For linux you need Wine > 6.
 
 ## Quickstart
+- Requires Python 3.7+
 - Download Conversion tools and MV: `$ bash setup.sh` 
 - Run `$ git submodule update --init --recursive`
 - Install a venv e.g.: `pipenv install -r requirements.txt`
