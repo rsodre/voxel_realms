@@ -174,8 +174,7 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
             plt.show()
 
     with step("----Combining coast and rivers"):
-        # final_mask = (mask & ~rivers) * 255
-        final_mask = mask
+        final_mask = (mask & ~rivers) * 255
         anti_final_mask = np.where(final_mask == 255, 0, 255)
         if debug:
             print(f"unique final_mask: {np.unique(final_mask)}")
@@ -215,51 +214,53 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
             plt.show()
 
     # ------------------------------------------------------------------------------
-    with step("----Underwater generation"):
-        wpad = config.terrain.water_padding
-        if wpad > 0:
-            wp = np.ones(
-                (anti_final_mask.shape[0] + 2 * wpad,
-                 anti_final_mask.shape[1] + 2 * wpad)) * 255
-            wp[wpad:-wpad, wpad:-wpad] = anti_final_mask
-            anti_final_mask = wp
-        water_depth = generate_terrain(anti_final_mask, **config.terrain.water)
+    # with step("----Underwater generation"):
+    #     wpad = config.terrain.water_padding
+    #     if wpad > 0:
+    #         wp = np.ones(
+    #             (anti_final_mask.shape[0] + 2 * wpad,
+    #              anti_final_mask.shape[1] + 2 * wpad)) * 255
+    #         wp[wpad:-wpad, wpad:-wpad] = anti_final_mask
+    #         anti_final_mask = wp
+    #     water_depth = generate_terrain(anti_final_mask, **config.terrain.water)
 
-        if debug:
-            plt.figure(figsize=DEBUG_IMG_SIZE)
-            plt.title("water depth pre scaling")
-            plt.imshow(water_depth)
-            plt.show()
+    #     if debug:
+    #         plt.figure(figsize=DEBUG_IMG_SIZE)
+    #         plt.title("water depth pre scaling")
+    #         plt.imshow(water_depth)
+    #         plt.show()
 
-        # some postprocessing to make sure that land is at 0
-        land_level = np.where(anti_final_mask == 0, water_depth, 0)
-        land_level_mean = (land_level[land_level > 0]).mean()
-        # water_depth = water_depth.clip(land_level_mean, water_depth.max())
-        # water_depth = norm(water_depth)
-        if debug:
-            print("sea stats")
-            print(f"land_level_min = {land_level.min()}")
-            print(f"land_level_max = {land_level.max()}")
-            print(f"land_level_mean = {land_level_mean}")
+    #     # some postprocessing to make sure that land is at 0
+    #     land_level = np.where(anti_final_mask == 0, water_depth, 0)
+    #     land_level_mean = (land_level[land_level > 0]).mean()
+    #     # water_depth = water_depth.clip(land_level_mean, water_depth.max())
+    #     # water_depth = norm(water_depth)
+    #     if debug:
+    #         print("sea stats")
+    #         print(f"land_level_min = {land_level.min()}")
+    #         print(f"land_level_max = {land_level.max()}")
+    #         print(f"land_level_mean = {land_level_mean}")
 
-            plt.figure(figsize=DEBUG_IMG_SIZE)
-            plt.title("anti_final_mask")
-            plt.imshow(anti_final_mask)
-            plt.show()
-            plt.figure(figsize=DEBUG_IMG_SIZE)
-            plt.title("water depth")
-            plt.imshow(water_depth)
-            plt.show()
+    #         plt.figure(figsize=DEBUG_IMG_SIZE)
+    #         plt.title("anti_final_mask")
+    #         plt.imshow(anti_final_mask)
+    #         plt.show()
+    #         plt.figure(figsize=DEBUG_IMG_SIZE)
+    #         plt.title("water depth")
+    #         plt.imshow(water_depth)
+    #         plt.show()
 
     # ------------------------------------------------------------------------------
     with step("----Combining terrain and water heights"):
-        final_mask = final_mask[wpad:-wpad, wpad:-wpad] if wpad > 0 else final_mask
-        _final_mask = final_mask < 255
-        terrain_height = terrain_height[wpad:-wpad, wpad:-wpad] if wpad > 0 else terrain_height
-        water_depth = water_depth[wpad:-wpad, wpad:-wpad] if wpad > 0 else water_depth
+        combined = terrain_height
 
-        EXTRA_OFFSET = 0.04  # used to enchance contrast with rivers
-        combined = 1.1 * terrain_height - REL_SEA_SCALING * _final_mask * water_depth
+        # final_mask = final_mask[wpad:-wpad, wpad:-wpad] if wpad > 0 else final_mask
+        # _final_mask = final_mask < 255
+        # terrain_height = terrain_height[wpad:-wpad, wpad:-wpad] if wpad > 0 else terrain_height
+        # water_depth = water_depth[wpad:-wpad, wpad:-wpad] if wpad > 0 else water_depth
+
+        # EXTRA_OFFSET = 0.04  # used to enchance contrast with rivers
+        # combined = 1.1 * terrain_height - REL_SEA_SCALING * _final_mask * water_depth
 
         # fix rivers height
         # combined = np.where(((combined > 0) & (original_rivers > 0)), 55, combined)
@@ -268,6 +269,7 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
         if config.pipeline.extra_scaling != 1:
             PAD = int(PAD * config.pipeline.extra_scaling)
         combined = combined[PAD:-PAD, PAD:-PAD]
+        final_mask = final_mask[PAD:-PAD, PAD:-PAD]
 
         # this snippet takes care of holes in the sea floor
         # sometimes the bottom layer gets remove so we just set one voxel to be the lowest.
@@ -321,21 +323,28 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
             combined * HSCALES[hscale],
             combined
         )
+
+        final_mask = np.where(
+            final_mask > 0,
+            final_mask * HSCALES[hscale],
+            final_mask
+        )
+
         if debug:
             print(f"Rescaling combined by {HSCALES[hscale]}.")
             print(f"combined_min = {combined.min()}.")
             print(f"combined_max = {combined.max()}.")
 
-    with step("Exporting height map without cities"):
-        hmap_export = (hmap * 255).astype(np.uint8)
-        hmap_export = PIL.Image.fromarray(hmap_export).convert('L')
-        if config.export.size > 0:
-            himg = hmap_export.resize(
-                (config.export.size, config.export.size),
-                PIL.Image.NEAREST
-            )
-        hmap_export = PIL.ImageOps.mirror(hmap_export)
-        hmap_export.save(MAIN_OUTPUT_DIR / f"heights_no_cities/heightsnc_{realm_number}.png")
+    # with step("Exporting height map without cities"):
+    #     hmap_export = (hmap * 255).astype(np.uint8)
+    #     hmap_export = PIL.Image.fromarray(hmap_export).convert('L')
+    #     if config.export.size > 0:
+    #         himg = hmap_export.resize(
+    #             (config.export.size, config.export.size),
+    #             PIL.Image.NEAREST
+    #         )
+    #     hmap_export = PIL.ImageOps.mirror(hmap_export)
+    #     hmap_export.save(MAIN_OUTPUT_DIR / f"heights_no_cities/heightsnc_{realm_number}.png")
 
     # with step("Generating and drawing cities onto heightmap"):
     #     cities = []
@@ -360,13 +369,18 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
 
     with step("Exporting height map"):
         hmap = (hmap * 255).astype(np.uint8)
-        himg = PIL.Image.fromarray(hmap).convert('L')
+        himg = PIL.Image.fromarray(hmap).convert('LA')
+
+        # final_mask = (final_mask * 255).astype(np.uint8)
+        mask_img = PIL.Image.fromarray(final_mask).convert('L')
+        himg.putalpha(mask_img)
+        
         if config.export.size > 0:
-            himg = himg.resize(
+            himg = himg.resize("L"
                 (config.export.size, config.export.size),
                 PIL.Image.NEAREST
             )
-        himg = PIL.ImageOps.mirror(himg)
+        # himg = PIL.ImageOps.mirror(himg)
         himg.save(MAIN_OUTPUT_DIR / f"heights/height_{realm_number}.png")
 
     #############################################
@@ -513,20 +527,20 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
                     (config.export.size, config.export.size),
                     PIL.Image.NEAREST
                 )
-            img = PIL.ImageOps.mirror(img)
+            # img = PIL.ImageOps.mirror(img)
             img.save(f"debug/debug_{name}.png")
 
         export_np_array(rivers, "rivers")
         export_np_array(final_mask, "final_mask")
         export_np_array(terrain_height, "terrain_height")
-        export_np_array(water_depth, "water_depth")
+        # export_np_array(water_depth, "water_depth")
 
         return {
             "hmap": hmap,
             "combined": combined,
             "final_mask": final_mask,
             "terrain_height": terrain_height,
-            "water_depth": water_depth,
+            # "water_depth": water_depth,
             "rivers": rivers,
             # "colormap": cmap_debug,
         }
