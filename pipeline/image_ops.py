@@ -367,7 +367,7 @@ def slice_cont(
     Outputs:
         Slices of pngs in output/hslice_{realm_number}.
     """
-    orig = (orig.astype(np.float) / zscale).astype(np.uint8)
+    orig = (orig.astype(np.float64) / zscale).astype(np.uint8)
     min_val = orig.min()
     max_val = orig.max()
     bookkeeping = None
@@ -462,10 +462,10 @@ def extract_land_sea_direction(
         theta: land-sea orientation of the realm
     """
     
-    top = np.sum(cropped_land_mask[0], dtype=np.float)
-    left = np.sum(cropped_land_mask[:,0], dtype=np.float)
-    bottom = np.sum(cropped_land_mask[-1], dtype=np.float)
-    right = np.sum(cropped_land_mask[:,-1], dtype=np.float)
+    top = np.sum(cropped_land_mask[0], dtype=np.float64)
+    left = np.sum(cropped_land_mask[:,0], dtype=np.float64)
+    bottom = np.sum(cropped_land_mask[-1], dtype=np.float64)
+    right = np.sum(cropped_land_mask[:,-1], dtype=np.float64)
 
     # invert so that it points towards the sea
     vector = np.array([left-right, bottom-top])

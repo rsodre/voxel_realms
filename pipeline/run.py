@@ -33,7 +33,7 @@ from svg_extraction import SVGExtractor, get_heightline_centers, get_city_coordi
 from image_ops import close_svg, slice_cont, generate_city, put_cities, extract_land_sea_direction
 from utils import *
 
-from coloring import biomes, WATER_COLORS, color_from_json
+# from coloring import biomes, WATER_COLORS, color_from_json
 
 def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
     REL_SEA_SCALING = config.terrain.relative_sea_depth_scaling
@@ -169,7 +169,8 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
             plt.show()
 
     with step("----Combining coast and rivers"):
-        final_mask = (mask & ~rivers) * 255
+        # final_mask = (mask & ~rivers) * 255
+        final_mask = mask
         anti_final_mask = np.where(final_mask == 255, 0, 255)
         if debug:
             print(f"unique final_mask: {np.unique(final_mask)}")
@@ -280,9 +281,9 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
     # CITIES
     #############################################
 
-    with step("Extracting cities"):
-        cities_drawing = extractor.cities()
-        city_centers = get_city_coordinates(cities_drawing)
+    # with step("Extracting cities"):
+    #     cities_drawing = extractor.cities()
+    #     city_centers = get_city_coordinates(cities_drawing)
 
     #############################################
     # EXPORT 1
@@ -331,26 +332,26 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
         hmap_export = PIL.ImageOps.mirror(hmap_export)
         hmap_export.save(MAIN_OUTPUT_DIR / f"heights_no_cities/heightsnc_{realm_number}.png")
 
-    with step("Generating and drawing cities onto heightmap"):
-        cities = []
-        for city_center in city_centers:
-            city_height, city_colors = generate_city(int(city_center[2] * config.pipeline.extra_scaling))
-            cities.append((*city_center, city_height, city_colors))
+    # with step("Generating and drawing cities onto heightmap"):
+    #     cities = []
+    #     for city_center in city_centers:
+    #         city_height, city_colors = generate_city(int(city_center[2] * config.pipeline.extra_scaling))
+    #         cities.append((*city_center, city_height, city_colors))
 
-        hmap_with_cities, _ = put_cities(
-            cities,
-            hmap=np.copy(hmap),
-            extra_scaling=config.pipeline.extra_scaling,
-            sealevel=rescaled_coast_height
-        )
-        hmap_cities = hmap_with_cities - hmap
-        hmap = hmap_with_cities
+    #     hmap_with_cities, _ = put_cities(
+    #         cities,
+    #         hmap=np.copy(hmap),
+    #         extra_scaling=config.pipeline.extra_scaling,
+    #         sealevel=rescaled_coast_height
+    #     )
+    #     hmap_cities = hmap_with_cities - hmap
+    #     hmap = hmap_with_cities
 
-        if debug:
-            plt.figure(figsize=DEBUG_IMG_SIZE)
-            plt.title("citied map")
-            plt.imshow(hmap)
-            plt.show()
+    #     if debug:
+    #         plt.figure(figsize=DEBUG_IMG_SIZE)
+    #         plt.title("citied map")
+    #         plt.imshow(hmap)
+    #         plt.show()
 
     with step("Exporting height map"):
         hmap = (hmap * 255).astype(np.uint8)
@@ -367,118 +368,118 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
     # COLORING
     #############################################
 
-    with step("Coloring"):
-        rand.seed(realm_number)
-        primary_biome = choice(biomes)
-        water_color = choice(WATER_COLORS)
-        secondary_biome = "none"
-        # primary_colorqmap = run_coloring(biomes[primary_biome], combined)
-        # secondary_colorqmap = run_coloring(biomes[secondary_biome], combined)
-        primary_colorqmap = color_from_json(combined, primary_biome)
-        # secondary_colorqmap = color_from_json(combined, secondary_biome)
-        # biome_noise = generate_fractal_noise_2d(primary_colorqmap.shape[:2], (2,2), 5)
-        # # mix biomes
-        # biome_noise = np.expand_dims(biome_noise, -1)
-        # biome_mask = np.expand_dims(final_mask[PAD:-PAD,PAD:-PAD], -1)
-        # colorqmap = np.where(biome_mask*(biome_noise>0.1), secondary_colorqmap, primary_colorqmap)
-        colorqmap = primary_colorqmap
+    # with step("Coloring"):
+    #     rand.seed(realm_number)
+    #     primary_biome = choice(biomes)
+    #     water_color = choice(WATER_COLORS)
+    #     secondary_biome = "none"
+    #     # primary_colorqmap = run_coloring(biomes[primary_biome], combined)
+    #     # secondary_colorqmap = run_coloring(biomes[secondary_biome], combined)
+    #     primary_colorqmap = color_from_json(combined, primary_biome)
+    #     # secondary_colorqmap = color_from_json(combined, secondary_biome)
+    #     # biome_noise = generate_fractal_noise_2d(primary_colorqmap.shape[:2], (2,2), 5)
+    #     # # mix biomes
+    #     # biome_noise = np.expand_dims(biome_noise, -1)
+    #     # biome_mask = np.expand_dims(final_mask[PAD:-PAD,PAD:-PAD], -1)
+    #     # colorqmap = np.where(biome_mask*(biome_noise>0.1), secondary_colorqmap, primary_colorqmap)
+    #     colorqmap = primary_colorqmap
 
-        # if debug:
-        #     plt.figure(figsize=DEBUG_IMG_SIZE)
-        #     plt.title("anti final mask")
+    #     # if debug:
+    #     #     plt.figure(figsize=DEBUG_IMG_SIZE)
+    #     #     plt.title("anti final mask")
 
-        #     plt.imshow(biome_mask*(biome_noise>0.1))
-        #     plt.show()
-        #     plt.figure(figsize=DEBUG_IMG_SIZE)
-        #     plt.title("biome noise")
-        #     plt.imshow(biome_noise>0)
-        #     plt.show()
-        #     print(f"primary biome: {primary_biome}")
-        #     print(f"secondary biome: {secondary_biome}")
+    #     #     plt.imshow(biome_mask*(biome_noise>0.1))
+    #     #     plt.show()
+    #     #     plt.figure(figsize=DEBUG_IMG_SIZE)
+    #     #     plt.title("biome noise")
+    #     #     plt.imshow(biome_noise>0)
+    #     #     plt.show()
+    #     #     print(f"primary biome: {primary_biome}")
+    #     #     print(f"secondary biome: {secondary_biome}")
 
     #############################################
     # EXPORT 2
     #############################################
 
-    with step("Exporting color map"):
-        colorqmap_export = colorqmap.astype(np.uint8)
+    # with step("Exporting color map"):
+    #     colorqmap_export = colorqmap.astype(np.uint8)
 
-        with step("Drawing cities onto colormap"):
-            _, colorqmap_export = put_cities(
-                cities,
-                cmap=colorqmap_export,
-                extra_scaling=config.pipeline.extra_scaling
-            )
+    #     with step("Drawing cities onto colormap"):
+    #         _, colorqmap_export = put_cities(
+    #             cities,
+    #             cmap=colorqmap_export,
+    #             extra_scaling=config.pipeline.extra_scaling
+    #         )
 
-        with step("Injecting water color"):
-            # oops, quick reconvert
-            colorqmap = np.array(colorqmap_export)
-            # colorqmap = inject_water_tile(colorqmap, final_mask, water_color) #m1 is the landmap
-            colorqmap_export = colorqmap.astype(np.uint8)
-            colorqmap_export = PIL.Image.fromarray(colorqmap_export)
+    #     with step("Injecting water color"):
+    #         # oops, quick reconvert
+    #         colorqmap = np.array(colorqmap_export)
+    #         # colorqmap = inject_water_tile(colorqmap, final_mask, water_color) #m1 is the landmap
+    #         colorqmap_export = colorqmap.astype(np.uint8)
+    #         colorqmap_export = PIL.Image.fromarray(colorqmap_export)
 
-        if config.export.size > 0:
-            colorqmap_export = colorqmap_export.resize(
-                (config.export.size, config.export.size),
-                PIL.Image.NEAREST
-            )
+    #     if config.export.size > 0:
+    #         colorqmap_export = colorqmap_export.resize(
+    #             (config.export.size, config.export.size),
+    #             PIL.Image.NEAREST
+    #         )
 
-        if debug:
-            cmap_debug = colorqmap.astype(np.uint8)
-            plt.figure(figsize=DEBUG_IMG_SIZE)
-            plt.title("pre-mirrored colormap")
-            plt.imshow(colorqmap_export)
-            plt.show()
+    #     if debug:
+    #         cmap_debug = colorqmap.astype(np.uint8)
+    #         plt.figure(figsize=DEBUG_IMG_SIZE)
+    #         plt.title("pre-mirrored colormap")
+    #         plt.imshow(colorqmap_export)
+    #         plt.show()
 
-        colorqmap_export = PIL.ImageOps.mirror(colorqmap_export)
-        colorqmap_export.save(MAIN_OUTPUT_DIR / f"colors/color_{realm_number}.png")
+    #     colorqmap_export = PIL.ImageOps.mirror(colorqmap_export)
+    #     colorqmap_export.save(MAIN_OUTPUT_DIR / f"colors/color_{realm_number}.png")
 
-    with step("---Exporting mask and rivers"):
-        original_pad = int(PAD/config.pipeline.extra_scaling)
-        mask_export = PIL.Image.fromarray(mask[original_pad:-original_pad,original_pad:-original_pad]*255)
-        if config.pipeline.extra_scaling != 1.:
-            mask_export = mask_export.resize((int(mask_export.size[0]*config.pipeline.extra_scaling), int(mask_export.size[1]*config.pipeline.extra_scaling)))
-        mask_export.save(MAIN_OUTPUT_DIR / f"masks/mask_{realm_number}.png")
-        rivers_export = PIL.Image.fromarray(original_rivers[PAD:-PAD,PAD:-PAD]*255)
-        rivers_export = PIL.ImageOps.mirror(rivers_export)
-        rivers_export.save(MAIN_OUTPUT_DIR / f"rivers/rivers_{realm_number}.png")
+    # with step("---Exporting mask and rivers"):
+    #     original_pad = int(PAD/config.pipeline.extra_scaling)
+    #     mask_export = PIL.Image.fromarray(mask[original_pad:-original_pad,original_pad:-original_pad]*255)
+    #     if config.pipeline.extra_scaling != 1.:
+    #         mask_export = mask_export.resize((int(mask_export.size[0]*config.pipeline.extra_scaling), int(mask_export.size[1]*config.pipeline.extra_scaling)))
+    #     mask_export.save(MAIN_OUTPUT_DIR / f"masks/mask_{realm_number}.png")
+    #     rivers_export = PIL.Image.fromarray(original_rivers[PAD:-PAD,PAD:-PAD]*255)
+    #     rivers_export = PIL.ImageOps.mirror(rivers_export)
+    #     rivers_export.save(MAIN_OUTPUT_DIR / f"rivers/rivers_{realm_number}.png")
         
 
     #############################################
     # Prepare for FileToVox
     #############################################
 
-    with step("Finding index of water tile"):
-        # need to do an exhaustive check here
-        colors_used = np.unique(np.reshape(colorqmap, [-1, 3]), axis=0)
-        for i, c in enumerate(list(colors_used)):
-            if np.array_equal(c, water_color):
-                break
-        water_index = len(list(colors_used)) - i
-        logger.debug(f"water_index: {water_index}")
+    # with step("Finding index of water tile"):
+    #     # need to do an exhaustive check here
+    #     colors_used = np.unique(np.reshape(colorqmap, [-1, 3]), axis=0)
+    #     for i, c in enumerate(list(colors_used)):
+    #         if np.array_equal(c, water_color):
+    #             break
+    #     water_index = len(list(colors_used)) - i
+    #     logger.debug(f"water_index: {water_index}")
 
-        with open(RESOURCES_DIR / "flood.json") as json_file:
-            data = json.load(json_file)
-        # change flooding water index
-        data["steps"][0]["TargetColorIndex"] = water_index - 1
-        data["steps"][0]["water_color"] = [
-            int(water_color[0]),
-            int(water_color[1]),
-            int(water_color[2]),
-        ]
-        # data["steps"][0]["hm_param"] = HSCALES[hscale][1]
-        # data["steps"][0]["Limit"] = HSCALES[hscale][2]
-        with open(MAIN_OUTPUT_DIR / f"flood_configs/flood_{realm_number}.json", "w") as json_file:
-            json.dump(data, json_file)
+    #     with open(RESOURCES_DIR / "flood.json") as json_file:
+    #         data = json.load(json_file)
+    #     # change flooding water index
+    #     data["steps"][0]["TargetColorIndex"] = water_index - 1
+    #     data["steps"][0]["water_color"] = [
+    #         int(water_color[0]),
+    #         int(water_color[1]),
+    #         int(water_color[2]),
+    #     ]
+    #     # data["steps"][0]["hm_param"] = HSCALES[hscale][1]
+    #     # data["steps"][0]["Limit"] = HSCALES[hscale][2]
+    #     with open(MAIN_OUTPUT_DIR / f"flood_configs/flood_{realm_number}.json", "w") as json_file:
+    #         json.dump(data, json_file)
 
-        palette = np.expand_dims(np.unique(np.reshape(colorqmap, (-1, 3)), axis=0), 0)
-        palette = PIL.Image.fromarray(palette)
+    #     palette = np.expand_dims(np.unique(np.reshape(colorqmap, (-1, 3)), axis=0), 0)
+    #     palette = PIL.Image.fromarray(palette)
 
-        palette.save(MAIN_OUTPUT_DIR / f"palettes/palette_{realm_number}.png")
+    #     palette.save(MAIN_OUTPUT_DIR / f"palettes/palette_{realm_number}.png")
 
     with step("Exporting metadata"):
         metadata = {
-            "primary_biome": primary_biome,
+            # "primary_biome": primary_biome,
             "landscape_height": hscale,
             "wind_direction": get_wind_direction(direction)
         }
@@ -522,7 +523,7 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
             "terrain_height": terrain_height,
             "water_depth": water_depth,
             "rivers": rivers,
-            "colormap": cmap_debug,
+            # "colormap": cmap_debug,
         }
 
     #############################################

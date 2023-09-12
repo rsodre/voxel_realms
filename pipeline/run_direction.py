@@ -33,7 +33,7 @@ from svg_extraction import SVGExtractor, get_heightline_centers, get_city_coordi
 from image_ops import close_svg, slice_cont, generate_city, put_cities, extract_land_sea_direction
 from utils import *
 
-from coloring import biomes, WATER_COLORS, color_from_json
+# from coloring import biomes, WATER_COLORS, color_from_json
 
 
 def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):

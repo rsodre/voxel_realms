@@ -38,6 +38,10 @@ for jfile in done_paths:
         no_hi.append("svgs/" + jfile.replace("output/metadata/","").replace(".json","") + ".svg")
 candidates = no_hi
 
+# Run #1 only
+candidates = ["svgs/1.svg"]
+print(candidates)
+
 if __name__=="__main__":
     print(f"done {len(done_paths)} realms")
     print(f"starting with {len(candidates)} candidates")
