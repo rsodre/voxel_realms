@@ -18,3 +18,4 @@ animations/
 ftv_hmaps/
 movie*/
 renders/
+__pycache__
