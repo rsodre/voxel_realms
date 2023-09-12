@@ -1,5 +1,13 @@
 # Voxel_realms
 
+## About this fork
+
+- Removed cities from the height map
+- Carve rivers into mountains instead of lowering them to sea level
+- Better texture size control
+- Disabled colors render
+
+
 ## Features
 - data extraction for all svg elements: cities, coast, heightlines, names
 - land-sea mask finding algorithm robust over many variations

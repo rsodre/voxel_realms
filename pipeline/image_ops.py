@@ -18,7 +18,7 @@ from reportlab.graphics.shapes import *
 logger = logging.getLogger("realms")
 
 
-def close_svg(drawing, rng=460, debug=False, islands_only=False):
+def close_svg(drawing, rng=460, debug=False, islands_only=False, output_size=400, scaling=1.):
     """This function tries to find open ends of paths and
     connects the ends while going around the image borders.
     
@@ -33,8 +33,8 @@ def close_svg(drawing, rng=460, debug=False, islands_only=False):
         bitmap of closed islands
     """
     LIMIT = 30
-    OUTPUT_SIZE = 800
-    SCALING = 2
+    OUTPUT_SIZE = output_size
+    SCALING = scaling
 
     def extend(x, y, bound, limit):
         """Extrapolates points lying at ‘limit‘."""

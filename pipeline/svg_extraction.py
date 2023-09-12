@@ -43,6 +43,7 @@ class SVGExtractor:
     
     def load_drawing(self):
         self.drawing_orig = svg2rlg(self.drawing_path)
+        print('svg drawing:', self.drawing_orig.width, self.drawing_orig.height)
         self.drawing_orig.scale(self.scale, self.scale)
         self.drawing_orig.width *= self.scale
         self.drawing_orig.height *= self.scale
@@ -98,7 +99,7 @@ def put_downstream(idx, shape_groups):
     
     return shape_groups
 
-def get_coast_coordinates(drawing, scaling=2):
+def get_coast_coordinates(drawing, scaling=1):
     """Returns a flat numpy array of size (n,2)."""
     ans = []
 
@@ -112,7 +113,7 @@ def get_coast_coordinates(drawing, scaling=2):
 
     return ans
 
-def get_city_coordinates(drawing, scaling=2):
+def get_city_coordinates(drawing, scaling=1):
     """Calculated in uncropped coordinates"""
     centers = []
     for circle in drawing.contents[0].contents: 
@@ -123,7 +124,7 @@ def get_city_coordinates(drawing, scaling=2):
         ))
     return centers
 
-def get_heightline_centers(drawing, scaling=2):
+def get_heightline_centers(drawing, scaling=1):
     line_coordinates = []
     for line in drawing.contents[0].contents:
         line_center = [(line.y2+line.y1)/2, (line.x2+line.x1)/2]

@@ -1,12 +1,13 @@
 svg:
-  scaling: 2.0
-  padding: 16
+  scaling: 1.0 # was 2.0
+  padding: 0 # was 16
+  output_size: 400
 pipeline:
   main_output_dir: "./output"
   resources_dir: "./resources"
   river_gaussian: 1.2
-  extra_scaling: 2. # this scales all the output
-  general_padding: 32 # general bitmask padding
+  extra_scaling: 1.0 # this scales all the output, was 2.0
+  general_padding: 0 # general bitmask padding, was 32
 terrain:
   land:
     disc_radius: 2.
@@ -24,7 +25,7 @@ terrain:
     default_water_level: 1.
     evaporation_rate: 0.3
     coastal_dropoff: 100.
-  water_padding: 64
+  water_padding: 0 # was 64
   relative_sea_depth_scaling: 0.32 # this scales back the sea so that it doesn't run too deep
   height_scales: # scales to vary the terrain height by, each realm will pick one of these at random
     lo: 0.33

@@ -36,11 +36,12 @@ from utils import *
 # from coloring import biomes, WATER_COLORS, color_from_json
 
 def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
+    OUTPUT_SIZE = config.svg.output_size
     REL_SEA_SCALING = config.terrain.relative_sea_depth_scaling
     HSCALES = config.terrain.height_scales
     # hscale = choice(list(HSCALES))
     hscale = "hi"
-    PAD = config.pipeline.general_padding
+    # PAD = config.pipeline.general_padding
     MAIN_OUTPUT_DIR = Path(config.pipeline.main_output_dir)
     RESOURCES_DIR = Path(config.pipeline.resources_dir)
     wind_directions = ("E", "SE", "S", "SW", "W", "NW", "N", "NE")
@@ -103,8 +104,9 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
 
     with step("Starting ground-sea mask logic"):
         # uses a fixed padding of 32
-        print(realm_number)
-        mask = close_svg(coast_drawing, debug=debug)
+        # print(realm_number)
+        mask = close_svg(coast_drawing, debug=debug, output_size=OUTPUT_SIZE, scaling=config.svg.scaling)
+        print('mask_1', mask.size)
 
         centers = get_heightline_centers(heightline_drawing)
         sum = _sum = 0
@@ -120,12 +122,12 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
         mask = mask.clip(0, 1)
 
         # extend land towards edges
-        h, w = mask.shape
-        for i in range(PAD):
-            mask[:, i] = mask[:, PAD]
-            mask[:, -i - 1] = mask[:, w - PAD]
-            mask[i, :] = mask[PAD, :]
-            mask[-i - 1, :] = mask[h - PAD, :]
+        # h, w = mask.shape
+        # for i in range(PAD):
+        #     mask[:, i] = mask[:, PAD]
+        #     mask[:, -i - 1] = mask[:, w - PAD]
+        #     mask[i, :] = mask[PAD, :]
+        #     mask[-i - 1, :] = mask[h - PAD, :]
 
         if debug:
             logger.debug(f"mask_shape: {mask.shape}")
@@ -135,11 +137,13 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
             plt.show()
 
     with step("---Calculating land-sea direction"):
-        direction = extract_land_sea_direction(mask[PAD:-PAD,PAD:-PAD], debug=debug)
+        # direction = extract_land_sea_direction(mask[PAD:-PAD,PAD:-PAD], debug=debug)
+        direction = extract_land_sea_direction(mask, debug=debug)
         with open(MAIN_OUTPUT_DIR / f"directions/{realm_number}_{direction:3f}.direction", "w") as file:
             file.write("")
         if debug:
-            imshow(mask[PAD:-PAD,PAD:-PAD], "cropped mask")
+            # imshow(mask[PAD:-PAD,PAD:-PAD], "cropped mask")
+            imshow(mask, "cropped mask")
 
     # ------------------------------------------------------------------------------
     with step("----Extracting rivers"):
@@ -266,10 +270,10 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
         # combined = np.where(((combined > 0) & (original_rivers > 0)), 55, combined)
         # combined = np.where(original_rivers > 0, REL_SEA_SCALING, combined+EXTRA_OFFSET)
 
-        if config.pipeline.extra_scaling != 1:
-            PAD = int(PAD * config.pipeline.extra_scaling)
-        combined = combined[PAD:-PAD, PAD:-PAD]
-        final_mask = final_mask[PAD:-PAD, PAD:-PAD]
+        # if config.pipeline.extra_scaling != 1:
+        #     PAD = int(PAD * config.pipeline.extra_scaling)
+        # combined = combined[PAD:-PAD, PAD:-PAD]
+        # final_mask = final_mask[PAD:-PAD, PAD:-PAD]
 
         # this snippet takes care of holes in the sea floor
         # sometimes the bottom layer gets remove so we just set one voxel to be the lowest.
@@ -278,11 +282,11 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
         # combined = combined.clip(combined.min()+0.02, combined.max())
         # combined[co] = lowest_val
 
-        if debug:
-            plt.figure(figsize=DEBUG_IMG_SIZE)
-            plt.title("combined map")
-            plt.imshow(combined)
-            plt.show()
+        # if debug:
+        #     plt.figure(figsize=DEBUG_IMG_SIZE)
+        #     plt.title("combined map")
+        #     plt.imshow(combined)
+        #     plt.show()
 
     #############################################
     # CITIES
@@ -376,7 +380,7 @@ def run_pipeline(realm_path, config="pipeline/config.yaml", debug=False):
         himg.putalpha(mask_img)
         
         if config.export.size > 0:
-            himg = himg.resize("L"
+            himg = himg.resize("L",
                 (config.export.size, config.export.size),
                 PIL.Image.NEAREST
             )
